@@ -5,44 +5,40 @@
 package frc.robot.commands.drive;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.Constants.Axis;
-import frc.robot.Constants.DriveMode;
-import frc.robot.Constants.Stick;
+import frc.robot.Constants.DriveConstants.DriveMode;
+import frc.robot.commands.LoggingCommandBase;
 import frc.robot.operatorInput.OperatorInput;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
  * An example command that uses the drive subsystem.
  */
-public class DefaultDriveCommand extends Command {
+public class DefaultDriveCommand extends LoggingCommandBase {
 
-    private final OperatorInput              operatorInput;
     private final DriveSubsystem             driveSubsystem;
+    private final OperatorInput              operatorInput;
     private final SendableChooser<DriveMode> driveModeChooser;
 
     /**
-     * Default Drive command. This command runs when nothing else is running that
-     * uses the drive subsystem.
+     * Creates a new ExampleCommand.
      *
-     * @param operatorInput
-     * @param driveSubsystem
+     * @param driveSubsystem The subsystem used by this command.
      */
-    public DefaultDriveCommand(OperatorInput operatorInput, DriveSubsystem driveSubsystem,
-        SendableChooser<DriveMode> driveModeChooser) {
+    public DefaultDriveCommand(OperatorInput operatorInput, SendableChooser<DriveMode> driveModeChooser,
+        DriveSubsystem driveSubsystem) {
 
         this.operatorInput    = operatorInput;
-        this.driveSubsystem   = driveSubsystem;
         this.driveModeChooser = driveModeChooser;
+        this.driveSubsystem   = driveSubsystem;
 
-        // Add required subsystems
+        // Use addRequirements() here to declare subsystem dependencies.
         addRequirements(driveSubsystem);
     }
 
     // Called when the command is initially scheduled.
     @Override
     public void initialize() {
-
+        logCommandStart();
     }
 
     // Called every time the scheduler runs while the command is scheduled.
@@ -53,40 +49,48 @@ public class DefaultDriveCommand extends Command {
 
         boolean   boost     = operatorInput.getBoost();
 
-        double    speed     = 0;
-        double    turn      = 0;
-
         switch (driveMode) {
 
         case SINGLE_STICK_ARCADE:
-            speed = operatorInput.getStick(Stick.LEFT, Axis.Y);
-            turn = operatorInput.getStick(Stick.LEFT, Axis.X);
-
-            driveSubsystem.setMotorSpeedsArcade(speed, turn, operatorInput.getBoost());
-
+            // DNE
         case DUAL_STICK_ARCADE:
-            speed = operatorInput.getStick(Stick.LEFT, Axis.Y);
-            turn = operatorInput.getStick(Stick.RIGHT, Axis.X);
+        default:
 
+            double speed = operatorInput.getSpeed(driveMode);
+            double turn = operatorInput.getTurn(driveMode);
+            setMotorSpeedsArcade(speed, turn, boost);
+            break;
 
         case TANK:
 
+            double leftSpeed = operatorInput.getLeftSpeed();
+            double rightSpeed = operatorInput.getRightSpeed();
+            if (boost) {
+                driveSubsystem.setMotorSpeeds(leftSpeed, rightSpeed);
+            }
+            else {
+                // If not in boost mode, then divide the motors speeds in half
+                driveSubsystem.setMotorSpeeds(leftSpeed / 2.0, rightSpeed / 2.0);
+            }
+            break;
         }
 
-    }
-
-    // Called once the command ends or is interrupted.
-    @Override
-    public void end(boolean interrupted) {
     }
 
     // Returns true when the command should end.
     @Override
     public boolean isFinished() {
+        // The default drive command never ends, but can be interrupted by other commands.
         return false;
     }
 
-    private void setMotorArcadeSpeeds(double speed, double turn, boolean boost) {
+    // Called once the command ends or is interrupted.
+    @Override
+    public void end(boolean interrupted) {
+        logCommandEnd(interrupted);
+    }
+
+    private void setMotorSpeedsArcade(double speed, double turn, boolean boost) {
 
         double maxSpeed = 1.0;
 
@@ -96,8 +100,13 @@ public class DefaultDriveCommand extends Command {
             maxSpeed /= 2.0;
         }
 
+        // The basic algorithm for arcade is to add the turn and the speed
+
         double leftSpeed  = speed + turn;
         double rightSpeed = speed - turn;
+
+        // If the speed + turn exceeds the max speed, then keep the differential
+        // and reduce the speed of the other motor appropriately
 
         if (Math.abs(leftSpeed) > maxSpeed || Math.abs(rightSpeed) > maxSpeed) {
 
@@ -126,7 +135,7 @@ public class DefaultDriveCommand extends Command {
         }
 
         driveSubsystem.setMotorSpeeds(leftSpeed, rightSpeed);
-
     }
+
 
 }

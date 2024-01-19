@@ -1,41 +1,130 @@
 package frc.robot.operatorInput;
 
-import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants.OperatorInputConstants;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Constants.DriveConstants.DriveMode;
+import frc.robot.Constants.OperatorConstants;
+import frc.robot.commands.CancelCommand;
 import frc.robot.subsystems.DriveSubsystem;
 
+
 /**
- * Operator Input
+ * The Operator input class is used to map buttons to functions and functions to commands
  * <p>
- * This class is used to bind buttons to functions.
- * <p>
- * The operator input class should be passed into any command that requires operator input
+ * This class extends SubsystemBase so that the periodic() routine is called each loop. The periodic
+ * routine can be used to send debug information to the dashboard
  */
 public class OperatorInput extends SubsystemBase {
 
-    XboxController driverController = new XboxController(OperatorInputConstants.DRIVER_CONTROLLER_PORT);
-
-    /**
-     * Use this method to define bindings of buttons to command
-     */
-    public void configureBindings(DriveSubsystem driveSubsystem) {
-
-        // Configure button bindings to commands by declaring new Triggers
-        // Triggers automatically get checked every loop.
+    public enum Stick {
+        LEFT, RIGHT
     }
 
+    public enum Axis {
+        X, Y
+    }
+
+    public final GameController driverController = new GameController(
+        OperatorConstants.DRIVER_CONTROLLER_PORT,
+        OperatorConstants.GAME_CONTROLLER_STICK_DEADBAND);
+
     /*
-     * Any command where operator input is required will need to get functional instructions from the controller
+     * Map all functions to buttons.
+     *
+     * A function should be a description of the robot behavior it is triggering.
+     *
+     * This separation of concerns allows for remapping of the robot functions to different
+     * controller buttons without the need to change the command or the trigger. The mapping
+     * from controller button to function is done in the following methods.
      */
-    public double getDriveSpeed() {
-        double stickValue = driverController.getRightY();
-        return stickValue;
+
+    // Cancel all commands when the driver presses the XBox controller three lines (aka. start)
+    // button
+    public boolean isCancel() {
+        return driverController.getStartButton();
+    }
+
+    public boolean getBoost() {
+        return driverController.getRightBumper();
+    }
+
+    public double getDriverControllerAxis(Stick stick, Axis axis) {
+
+        switch (stick) {
+
+        case LEFT:
+            switch (axis) {
+            case X:
+                return driverController.getLeftX();
+            case Y:
+                return driverController.getLeftY();
+            }
+            break;
+
+        case RIGHT:
+            switch (axis) {
+            case X:
+                return driverController.getRightX();
+            case Y:
+                return driverController.getRightY();
+            }
+            break;
+        }
+
+        return 0;
+    }
+
+    public double getSpeed(DriveMode driveMode) {
+
+        return getDriverControllerAxis(Stick.LEFT, Axis.Y);
+    }
+
+    public double getTurn(DriveMode driveMode) {
+
+        double turn = 0;
+
+        switch (driveMode) {
+
+        case SINGLE_STICK_ARCADE:
+            turn = getDriverControllerAxis(Stick.LEFT, Axis.X);
+            break;
+
+        case DUAL_STICK_ARCADE:
+        default:
+            turn = getDriverControllerAxis(Stick.RIGHT, Axis.X);
+            break;
+        }
+
+        return turn;
+    }
+
+    public double getLeftSpeed() {
+        return getDriverControllerAxis(Stick.LEFT, Axis.Y);
+    }
+
+    public double getRightSpeed() {
+        return getDriverControllerAxis(Stick.RIGHT, Axis.Y);
+    }
+
+    /**
+     * Use this method to define your robotFunction -> command mappings.
+     *
+     * NOTE: all subsystems should be passed into this method.
+     */
+    public void configureButtonBindings(DriveSubsystem driveSubsystem) {
+
+        new Trigger(() -> isCancel())
+            .onTrue(new CancelCommand(this, driveSubsystem));
+
     }
 
     @Override
     public void periodic() {
-        // This method will be called once per scheduler run
+
+        // Display any operator input values on the smart dashboard.
+
+        SmartDashboard.putString("Driver Controller", driverController.toString());
     }
 
 }

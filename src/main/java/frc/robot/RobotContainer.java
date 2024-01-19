@@ -6,8 +6,9 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.Constants.DriveMode;
-import frc.robot.commands.auto.AutoCommand;
+import frc.robot.Constants.AutoConstants.AutoPattern;
+import frc.robot.Constants.DriveConstants.DriveMode;
+import frc.robot.commands.auto.AutonomousCommand;
 import frc.robot.commands.drive.DefaultDriveCommand;
 import frc.robot.operatorInput.OperatorInput;
 import frc.robot.subsystems.DriveSubsystem;
@@ -20,11 +21,15 @@ import frc.robot.subsystems.DriveSubsystem;
 public class RobotContainer {
 
     // Declare the operator input class
-    private final OperatorInput              operatorInput    = new OperatorInput();
+    private final OperatorInput                operatorInput      = new OperatorInput();
 
     // Declare all subsystems.
-    private final DriveSubsystem             driveSubsystem   = new DriveSubsystem();
-    private final SendableChooser<DriveMode> driveModeChooser = new SendableChooser<>();
+    private final DriveSubsystem               driveSubsystem     = new DriveSubsystem();
+    private final SendableChooser<DriveMode>   driveModeChooser   = new SendableChooser<>();
+
+    // AutoPattern stuff
+    private final SendableChooser<AutoPattern> autoPatternChooser = new SendableChooser<>();
+
     // private final SendableChooser<AutoPattern> autoPatternChooser = new SendableChooser<>();
 
 
@@ -38,7 +43,7 @@ public class RobotContainer {
             new DefaultDriveCommand(operatorInput, driveModeChooser, driveSubsystem));
 
         // Configure the operator input button bindings.
-        operatorInput.configureBindings(driveSubsystem);
+        operatorInput.configureButtonBindings(driveSubsystem);
     }
 
     /**
@@ -49,6 +54,6 @@ public class RobotContainer {
     public Command getAutonomousCommand() {
 
         // Pass all subsystems to the auto constructor.
-        return new AutoCommand(driveSubsystem);
+        return new AutonomousCommand(driveSubsystem, autoPatternChooser);
     }
 }
